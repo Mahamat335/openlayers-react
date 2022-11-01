@@ -1,0 +1,29 @@
+.map-container {
+  background-color: #04041b;
+  height: 100vh;
+  width: 100vw;
+  margin: auto;
+}
+body{
+  padding: 0;
+  margin:0;
+}
+#type {
+  /* margin-left: 50px; */
+  margin-top: 10px;
+  background-color: #003c8880;
+  color: #fff;
+  border-color: #999;
+}
+#deniz-button {
+  margin-left: 50px;
+}
+.buttons{
+  margin-top: 10px;
+  background-color: #003c8880;
+  color: #fff;
+  border-color: #999;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 4px;
+}
