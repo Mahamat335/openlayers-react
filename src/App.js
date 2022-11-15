@@ -86,6 +86,7 @@ function App() {
       });
     
     var speedVectorLine;
+    var historyValue;
     const [map, setMap] = useState(tmpMap);
     const mapElement = useRef();
     const mapRef = useRef();
@@ -172,7 +173,7 @@ function App() {
           speedVectorInfo.current.innerHTML =speedVectorSlider.current.value;
           historyInfo.current.innerHTML =historySlider.current.value;
           speedVectorLine = speedVectorSlider.current.value;
-          //
+          historyValue = historySlider.current.value;
           
 
           map.addInteraction(modify);
@@ -234,7 +235,7 @@ function App() {
         speedVectorInfo.current.innerHTML = speedVectorSlider.current.value;
         speedVectorLine = speedVectorSlider.current.value;
         historyInfo.current.innerHTML = historySlider.current.value;
-        //
+        historyValue = historySlider.current.value;
       }
 
       const defaultStyle = new Modify({source: source})
@@ -277,7 +278,7 @@ function App() {
               modifyGeometry.setGeometries(geometries);
             }
           });
-          return defaultStyle(feature);
+          return defaultStyle(feature); 
         },
       });
     
@@ -365,6 +366,7 @@ function App() {
       const etiketler = [];
       const speedVectors = [];
       const cizgiler = [];
+      var history = [];
       for(let i = 0; i<15; i++){
         ucaklar.push(new Feature(new Circle(fromLonLat([34, 39]), 400)));
         speedVectors.push(new Feature(new LineString([fromLonLat([34, 39]), fromLonLat([36, 39])])));
@@ -405,6 +407,7 @@ function App() {
         yonler.push(Math.random());
         yonler.push((Math.random())*-1);
         izlerUcak.push([]);
+        history.push([]);
       }
       const interval = setInterval(() => {
         
@@ -413,10 +416,17 @@ function App() {
           etiketler[i].getGeometry().setCenter(ucaklar[i].getGeometry().getCenter());
           let izUcak = new Feature(new Circle(ucaklar[i].getGeometry().getCenter(), 100));
           izlerUcak[i].push(izUcak);
-          if(izlerUcak[i].length>4){
+          if(izlerUcak[i].length>12){
             izlerUcak[i].shift();
             
-            izlerUcak[i][0].setStyle(new Style({
+            
+           }
+           if(izlerUcak[i].length<historyValue)
+              history[i]=izlerUcak[i];
+           else
+              history[i] = izlerUcak[i].slice(-historyValue);
+           if(history[i].length>2){
+            history[i][0].setStyle(new Style({
               stroke: new Stroke({
                 color: 'red',
                 width: 1
@@ -425,7 +435,7 @@ function App() {
                 color: 'rgba(0, 255, 0, 0.1)'
               })
             }));
-            izlerUcak[i][1].setStyle(new Style({
+            history[i][1].setStyle(new Style({
               stroke: new Stroke({
                 color: 'red',
                 width: 2
@@ -434,6 +444,18 @@ function App() {
                 color: 'rgba(0, 255, 0, 0.1)'
               })
             }));
+
+            for(let j=2; j<history[i].length; j++){
+              history[i][j].setStyle(new Style({
+                stroke: new Stroke({
+                  color: 'red',
+                  width: 3
+                }),
+                fill: new Fill({
+                  color: 'rgba(0, 0, 255, 0.1)'
+                })
+              }));
+            }
            }
       
           let coord = transform(ucaklar[i].getGeometry().getCenter(), "EPSG:3857","EPSG:4326"); 
@@ -474,7 +496,7 @@ function App() {
         cemberSource.addFeatures(speedVectors);
         cemberSource.addFeatures(cizgiler);
         for(let i = 0; i<ucaklar.length; i++){
-          cemberSource.addFeatures(izlerUcak[i]);
+          cemberSource.addFeatures(history[i]);
         }
       }, 4000);
 
