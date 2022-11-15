@@ -1,8 +1,8 @@
 .map-container {
   background-color: #04041b;
-  height: 100vh;
+  /* height: 100vh; */
   width: 100vw;
-  margin: auto;
+  /* margin: auto; */
 }
 body{
   padding: 0;
@@ -15,7 +15,7 @@ body{
   color: #fff;
   border-color: #999;
 }
-#deniz-button {
+#first-button {
   margin-left: 50px;
 }
 .buttons{
@@ -26,4 +26,52 @@ body{
   border-style: solid;
   border-width: 1px;
   border-radius: 4px;
+}
+
+.slidecontainer {
+  width: 125px; /* Width of the outside container */
+  padding-left: 100px;
+}
+
+/* The slider itself */
+.slider {
+  margin: 10px;
+  -webkit-appearance: none;  /* Override default CSS styles */
+  appearance: none;
+  width: 125px; /* Full-width */
+  height: 5px; /* Specified height */
+  background: #d3d3d3; /* Grey background */
+  outline: none; /* Remove outline */
+  opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+  -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+  transition: opacity .2s;
+}
+
+/* Mouse-over effects */
+.slider:hover {
+  opacity: 1; /* Fully shown on mouse-over */
+}
+
+/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */ 
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; /* Override default look */
+  appearance: none;
+  width: 10px; /* Set a specific slider handle width */
+  height: 15px; /* Slider handle height */
+  background: blueviolet; /* Green background */
+  cursor: pointer; /* Cursor on hover */
+}
+
+.slider::-moz-range-thumb {
+  width: 10px; /* Set a specific slider handle width */
+  height: 15px; /* Slider handle height */
+  background: blueviolet; /* Green background */
+  cursor: pointer; /* Cursor on hover */
+}
+
+.sliderInfo {
+  color: blueviolet;
+  -webkit-text-stroke-width: 0.5px;
+  -webkit-text-stroke-color: gray;
+  margin: 5px;
 }

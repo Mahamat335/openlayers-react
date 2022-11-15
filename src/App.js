@@ -84,10 +84,28 @@ function App() {
               zoom: 3
           }),
       });
-
+    
+    var speedVectorLine;
     const [map, setMap] = useState(tmpMap);
     const mapElement = useRef();
     const mapRef = useRef();
+    const speedVectorSlider = useRef();
+    const speedVectorInfo = useRef();
+    const historySlider = useRef();
+    const historyInfo = useRef();
+
+    const nokta = useRef();
+    const cizgi = useRef();
+    const poligon = useRef();
+    const cember = useRef();
+    const geoid = useRef();
+    const fare = useRef();
+
+    const denizButton = useRef();
+    const gollerButton = useRef();
+    const illerButton = useRef();
+    const ilcelerButton = useRef();
+
     mapRef.current = map;
 
       useEffect(() => {
@@ -109,33 +127,53 @@ function App() {
   
 
         map.addControl(new Control({
-            element:document.getElementById("deniz-button")
+            element:denizButton.current
           }))
           map.addControl(new Control({
-            element:document.getElementById("goller-button")
+            element:gollerButton.current
           }))
           map.addControl(new Control({
-            element:document.getElementById("iller-button")
+            element:illerButton.current
           }))
           map.addControl(new Control({
-            element:document.getElementById("ilceler-button")
+            element:ilcelerButton.current
           }))
 
           map.addControl(new Control({
-            element:document.getElementById("Point")
+            element:nokta.current
           }))
           map.addControl(new Control({
-            element:document.getElementById("LineString")
+            element:cizgi.current
           }))
           map.addControl(new Control({
-            element:document.getElementById("Polygon")
+            element:poligon.current
           }))
           map.addControl(new Control({
-            element:document.getElementById("Circle")
+            element:cember.current
           }))
           map.addControl(new Control({
-            element:document.getElementById("Geodesic")
+            element:geoid.current
           }))
+          map.addControl(new Control({
+            element:fare.current
+          }))
+          map.addControl(new Control({
+            element:speedVectorSlider.current
+          }))
+          map.addControl(new Control({
+            element:speedVectorInfo.current
+          }))
+          map.addControl(new Control({
+            element:historySlider.current
+          }))
+          map.addControl(new Control({
+            element:historyInfo.current
+          }))
+          speedVectorInfo.current.innerHTML =speedVectorSlider.current.value;
+          historyInfo.current.innerHTML =historySlider.current.value;
+          speedVectorLine = speedVectorSlider.current.value;
+          //
+          
 
           map.addInteraction(modify);
     }, []);
@@ -184,6 +222,19 @@ function App() {
         map.removeInteraction(draw);
         map.removeInteraction(snap);
         addInteractions();
+      }
+      function mouseButton(){
+        value = null;
+        map.removeInteraction(draw);
+        map.removeInteraction(snap);
+        addInteractions();
+      }
+
+      function slide(){
+        speedVectorInfo.current.innerHTML = speedVectorSlider.current.value;
+        speedVectorLine = speedVectorSlider.current.value;
+        historyInfo.current.innerHTML = historySlider.current.value;
+        //
       }
 
       const defaultStyle = new Modify({source: source})
@@ -314,7 +365,7 @@ function App() {
       const etiketler = [];
       const speedVectors = [];
       const cizgiler = [];
-      for(let i = 0; i<1500; i++){
+      for(let i = 0; i<15; i++){
         ucaklar.push(new Feature(new Circle(fromLonLat([34, 39]), 400)));
         speedVectors.push(new Feature(new LineString([fromLonLat([34, 39]), fromLonLat([36, 39])])));
         etiketler.push(new Feature(new Circle(fromLonLat([34, 39]), 0)));
@@ -356,7 +407,6 @@ function App() {
         izlerUcak.push([]);
       }
       const interval = setInterval(() => {
-        
         
         for(let i = 0; i<ucaklar.length; i++){
       
@@ -402,15 +452,14 @@ function App() {
             if(i%2){
               coord[0]+=yonler[i*2]/4;
               coord[1]-=yonler[i*2+1]/4;
-      
-              speedVectorPoint[0] = coord[0]+yonler[i*2];
-              speedVectorPoint[1] = coord[1]-yonler[i*2+1];
+              speedVectorPoint[0] = coord[0]+yonler[i*2]*speedVectorLine/4;
+              speedVectorPoint[1] = coord[1]-yonler[i*2+1]*speedVectorLine/4;
             }else{
               coord[0]-=yonler[i*2]/4;
               coord[1]+=yonler[i*2+1]/4;
       
-              speedVectorPoint[0] = coord[0]-yonler[i*2];
-              speedVectorPoint[1] = coord[1]+yonler[i*2+1];
+              speedVectorPoint[0] = coord[0]-yonler[i*2]*speedVectorLine/4;
+              speedVectorPoint[1] = coord[1]+yonler[i*2+1]*speedVectorLine/4;
             }
           coordLabel[0]= coord[0]+0.015;
           coordLabel[1]= coord[1]+0.015;
@@ -433,20 +482,30 @@ function App() {
 
     return (
     <>
-      <div style={{height:'100vh',width:'100%'}} ref={mapElement} className="map-container" />
+      <div style={{height:'100vh',width:'100vw'}} ref={mapElement} className="map-container" />
       <script type="module" src="main.js"></script>
       <div id="map-container" className="map-container"></div>
       <form className="form-inline" >
-      <button id="Point" className="buttons" onClick={PointButton}>Point</button>
-      <button id="LineString" className="buttons" onClick={LineStringButton}>LineString</button>
-      <button id="Polygon" className="buttons" onClick={PolygonButton}>Polygon</button>
-      <button id="Circle" className="buttons" onClick={CircleButton}>Circle Geometry</button>
-      <button id="Geodesic" className="buttons" onClick={GeodesicButton}>Geodesic Circle</button>
+      <button ref={nokta} className="buttons" onClick={PointButton}>Point</button>
+      <button ref={cizgi} className="buttons" onClick={LineStringButton}>LineString</button>
+      <button ref={poligon} className="buttons" onClick={PolygonButton}>Polygon</button>
+      <button ref={cember} className="buttons" onClick={CircleButton}>Circle Geometry</button>
+      <button ref={geoid} className="buttons" onClick={GeodesicButton}>Geodesic Circle</button>
+      <button ref={fare} className="buttons" onClick={mouseButton}>Mouse Cursor</button>
       </form>
-      <button id="deniz-button" className="buttons" onClick={setDeniz}>Toggle Seas</button>
-      <button id="goller-button" className="buttons" onClick={setGoller}>Toggle Lakes</button>
-      <button id="iller-button" className="buttons" onClick={setIller}>Toggle Cities</button>
-      <button id="ilceler-button" className="buttons" onClick={setIlceler}>Toggle Provinces</button>
+      <button id= "first-button" ref={denizButton} className="buttons" onClick={setDeniz}>Toggle Seas</button>
+      <button ref={gollerButton} className="buttons" onClick={setGoller}>Toggle Lakes</button>
+      <button ref={illerButton} className="buttons" onClick={setIller}>Toggle Cities</button>
+      <button ref={ilcelerButton}className="buttons" onClick={setIlceler}>Toggle Provinces</button>
+      
+      <div className="slidecontainer">
+        <input type="range" min="4" max="12" defaultValue="8" className="slider" ref={speedVectorSlider} onInput={slide} ></input>
+        <span className="sliderInfo" ref={speedVectorInfo}></span>  
+      </div>
+      <div className="slidecontainer">
+        <input type="range" min="4" max="12" defaultValue="8" className="slider" ref={historySlider} onInput={slide} ></input>
+        <span className="sliderInfo" ref={historyInfo}></span>
+      </div>
     </>
     );
 }
