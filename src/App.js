@@ -8,7 +8,7 @@ import {Circle as CircleStyle, Fill, Stroke, Style, Text} from 'ol/style';
 import {Draw, Modify, Snap} from 'ol/interaction';
 import {GeometryCollection, LineString, Point, Polygon} from 'ol/geom';
 import {circular} from 'ol/geom/Polygon';
-import {getDistance} from 'ol/sphere';
+import {getDistance, getArea, getLength} from 'ol/sphere';
 import {transform} from 'ol/proj';
 import {Control} from 'ol/control';
 import {transformExtent} from 'ol/proj';
@@ -17,6 +17,8 @@ import Circle from 'ol/geom/Circle';
 import {fromLonLat} from 'ol/proj';
 import {detayLayer, denizLayer, illerLayer, gollerLayer, ilcelerLayer} from './Layers';
 import "./App.css"
+import {unByKey} from 'ol/Observable';
+import Overlay from 'ol/Overlay';
 
 function App() {
 
@@ -87,6 +89,7 @@ function App() {
     
     var speedVectorLine;
     var historyValue;
+    var typeSelect;
     const [map, setMap] = useState(tmpMap);
     const mapElement = useRef();
     const mapRef = useRef();
@@ -94,6 +97,9 @@ function App() {
     const speedVectorInfo = useRef();
     const historySlider = useRef();
     const historyInfo = useRef();
+
+    const lineM = useRef();
+    const shapeM = useRef();
 
     const nokta = useRef();
     const cizgi = useRef();
@@ -109,24 +115,66 @@ function App() {
 
     mapRef.current = map;
 
+   /*  
+  @type {import("../src/ol/Feature.js").default}
+  */
+let sketch;
+
+/* *
+ * The help tooltip element.
+ * @type {HTMLElement}
+ */
+let helpTooltipElement;
+
+/* *
+ * Overlay to show the help messages.
+ * @type {Overlay}
+ */
+let helpTooltip;
+
+/* *
+ * The measure tooltip element.
+ * @type {HTMLElement}
+ */
+let measureTooltipElement;
+
+/* *
+ * Overlay to show the measurement.
+ * @type {Overlay}
+ */
+let measureTooltip;
+
+/* *
+ * Message to show when the user is drawing a polygon.
+ * @type {string}
+ */
+const continuePolygonMsg = 'Click to continue drawing the polygon';
+
+/* *
+ * Message to show when the user is drawing a line.
+ * @type {string}
+ */
+const continueLineMsg = 'Click to continue drawing the line';  
+      
+
       useEffect(() => {
         map.setTarget(mapElement.current)
-      map.addLayer(illerLayer)
-      map.addLayer(detayLayer)
-      map.addLayer(denizLayer)
-      map.addLayer(gollerLayer)
-      map.addLayer(ilcelerLayer)
-      map.addLayer(drawLayer)
+        map.addLayer(illerLayer)
+        map.addLayer(detayLayer)
+        map.addLayer(denizLayer)
+        map.addLayer(gollerLayer)
+        map.addLayer(ilcelerLayer)
+        map.addLayer(drawLayer)
         setMap(map);
 
         denizLayer.setVisible(false);
-  gollerLayer.setVisible(false);
-  illerLayer.setVisible(false);
-  ilcelerLayer.setVisible(false);
-  drawLayer.setZIndex(1);
+        gollerLayer.setVisible(false);
+        illerLayer.setVisible(false);
+        ilcelerLayer.setVisible(false);
+        drawLayer.setZIndex(1);
 
   
-
+        
         map.addControl(new Control({
             element:denizButton.current
           }))
@@ -158,6 +206,14 @@ function App() {
           map.addControl(new Control({
             element:fare.current
           }))
+
+          map.addControl(new Control({
+            element:lineM.current
+          }))
+          map.addControl(new Control({
+            element:shapeM.current
+          }))
+
           map.addControl(new Control({
             element:speedVectorSlider.current
           }))
@@ -195,40 +251,54 @@ function App() {
         illerLayer.setVisible(!illerLayer.getVisible())
       }
       function PointButton(){
-        value = "Point";
-        map.removeInteraction(draw);
+        value = "Point";typeSelect = null;
+        map.removeInteraction(draw);map.removeInteraction(drawM);
         map.removeInteraction(snap);
         addInteractions();
       }
       function LineStringButton(){
-        value = "LineString";
-        map.removeInteraction(draw);
+        value = "LineString";typeSelect = null;
+        map.removeInteraction(draw);map.removeInteraction(drawM);
         map.removeInteraction(snap);
         addInteractions();
       }
       function PolygonButton(){
-        value = "Polygon";
-        map.removeInteraction(draw);
+        value = "Polygon";typeSelect = null;
+        map.removeInteraction(draw);map.removeInteraction(drawM);
         map.removeInteraction(snap);
         addInteractions();
       }
       function CircleButton(){
-        value = "Circle";
-        map.removeInteraction(draw);
+        value = "Circle";typeSelect = null;
+        map.removeInteraction(draw);map.removeInteraction(drawM);
         map.removeInteraction(snap);
         addInteractions();
       }
       function GeodesicButton(){
-        value = "Geodesic";
-        map.removeInteraction(draw);
+        value = "Geodesic";typeSelect = null;
+        map.removeInteraction(draw);map.removeInteraction(drawM);
         map.removeInteraction(snap);
         addInteractions();
       }
       function mouseButton(){
-        value = null;
-        map.removeInteraction(draw);
+        value = null; typeSelect = null;
+        map.removeInteraction(draw);map.removeInteraction(drawM);
         map.removeInteraction(snap);
         addInteractions();
+      }
+      function lineMes(){
+        value = null;
+        typeSelect = "length";
+        map.removeInteraction(draw);map.removeInteraction(drawM);
+        map.removeInteraction(snap);
+        addInteraction();
+      }
+      function shapeMes(){
+        value = null;
+        typeSelect = "area";
+        map.removeInteraction(draw);map.removeInteraction(drawM);
+        map.removeInteraction(snap);
+        addInteraction();
       }
 
       function slide(){
@@ -237,6 +307,180 @@ function App() {
         historyInfo.current.innerHTML = historySlider.current.value;
         historyValue = historySlider.current.value;
       }
+
+      /* *
+ * Handle pointer move.
+ * @param {import("../src/ol/MapBrowserEvent").default} evt The event.
+ */
+const pointerMoveHandler = function (evt) {
+  if (evt.dragging) {
+    return;
+  }
+  
+  /* * @type {string} */
+  let helpMsg = 'Click to start drawing';
+
+  if (sketch) {
+    const geom = sketch.getGeometry();
+    if (geom instanceof Polygon) {
+      helpMsg = continuePolygonMsg;
+    } else if (geom instanceof LineString) {
+      helpMsg = continueLineMsg;
+    }
+  }
+  if(!typeSelect){
+    createHelpTooltip();
+    return;
+  }
+  helpTooltipElement.innerHTML = helpMsg;
+  helpTooltip.setPosition(evt.coordinate);
+
+};
+map.on('pointermove', pointerMoveHandler);
+
+
+
+let drawM; // global so we can remove it later
+
+/* *
+ * Format length output.
+ * @param {LineString} line The line.
+ * @return {string} The formatted length.
+ */
+const formatLength = function (line) {
+  const length = getLength(line);
+  let output;
+  if (length > 100) {
+    output = Math.round((length / 1000) * 100) / 100 + ' ' + 'km';
+  } else {
+    output = Math.round(length * 100) / 100 + ' ' + 'm';
+  }
+  return output;
+};
+
+/* *
+ * Format area output.
+ * @param {Polygon} polygon The polygon.
+ * @return {string} Formatted area.
+ */
+const formatArea = function (polygon) {
+  const area = getArea(polygon);
+  let output;
+  if (area > 10000) {
+    output = Math.round((area / 1000000) * 100) / 100 + ' ' + 'km<sup>2</sup>';
+  } else {
+    output = Math.round(area * 100) / 100 + ' ' + 'm<sup>2</sup>';
+  }
+  return output;
+};
+
+function addInteraction() {
+  if(!typeSelect)
+    return;
+  const type = typeSelect == 'area' ? 'Polygon' : 'LineString';
+  drawM = new Draw({
+    source: source,
+    type: type,
+    style: new Style({
+      fill: new Fill({
+        color: 'rgba(255, 255, 255, 0.2)',
+      }),
+      stroke: new Stroke({
+        color: 'rgba(0, 0, 0, 0.5)',
+        lineDash: [10, 10],
+        width: 2,
+      }),
+      image: new CircleStyle({
+        radius: 5,
+        stroke: new Stroke({
+          color: 'rgba(0, 0, 0, 0.7)',
+        }),
+        fill: new Fill({
+          color: 'rgba(255, 255, 255, 0.2)',
+        }),
+      }),
+    }),
+  });
+  map.addInteraction(drawM);
+
+  createMeasureTooltip();
+  createHelpTooltip();
+
+  let listener;
+  drawM.on('drawstart', function (evt) {
+    // set sketch
+    sketch = evt.feature;
+
+    /* * @type {import("../src/ol/coordinate.js").Coordinate|undefined} */
+    let tooltipCoord = evt.coordinate;
+
+    listener = sketch.getGeometry().on('change', function (evt) {
+      const geom = evt.target;
+      let output;
+      if (geom instanceof Polygon) {
+        output = formatArea(geom);
+        tooltipCoord = geom.getInteriorPoint().getCoordinates();
+      } else if (geom instanceof LineString) {
+        output = formatLength(geom);
+        tooltipCoord = geom.getLastCoordinate();
+      }
+      measureTooltipElement.innerHTML = output;
+      measureTooltip.setPosition(tooltipCoord);
+    });
+  });
+
+  drawM.on('drawend', function () {
+    measureTooltipElement.className = 'ol-tooltip ol-tooltip-static';
+    measureTooltip.setOffset([0, -7]);
+    // unset sketch
+    sketch = null;
+    // unset tooltip so that a new one can be created
+    measureTooltipElement = null;
+    createMeasureTooltip();
+    unByKey(listener);
+  });
+}
+
+/**
+ * Creates a new help tooltip
+ */
+function createHelpTooltip() {
+  if (helpTooltipElement) {
+    helpTooltipElement.parentNode.removeChild(helpTooltipElement);
+  }
+  helpTooltipElement = document.createElement('div');
+  helpTooltip = new Overlay({
+    element: helpTooltipElement,
+    offset: [15, 0],
+    positioning: 'center-left',
+  });
+  map.addOverlay(helpTooltip);
+}
+
+/**
+ * Creates a new measure tooltip
+ */
+function createMeasureTooltip() {
+  if (measureTooltipElement) {
+    measureTooltipElement.parentNode.removeChild(measureTooltipElement);
+  }
+  measureTooltipElement = document.createElement('div');
+  measureTooltipElement.className = 'ol-tooltip ol-tooltip-measure';
+  measureTooltip = new Overlay({
+    element: measureTooltipElement,
+    offset: [0, -15],
+    positioning: 'bottom-center',
+    stopEvent: false,
+    insertFirst: false,
+  });
+  map.addOverlay(measureTooltip);
+}
+
+/**
+ * Let user change the geometry type.
+ */
+
+addInteraction();///////////////////////////
 
       const defaultStyle = new Modify({source: source})
       .getOverlay()
@@ -507,6 +751,8 @@ function App() {
       <div style={{height:'100vh',width:'100vw'}} ref={mapElement} className="map-container" />
       <script type="module" src="main.js"></script>
       <div id="map-container" className="map-container"></div>
+      <button ref={lineM} className="buttons" onClick={lineMes}>Line Measurement</button>
+      <button ref={shapeM} className="buttons" onClick={shapeMes}>Polygon Measurement</button>
       <form className="form-inline" >
       <button ref={nokta} className="buttons" onClick={PointButton}>Point</button>
       <button ref={cizgi} className="buttons" onClick={LineStringButton}>LineString</button>
